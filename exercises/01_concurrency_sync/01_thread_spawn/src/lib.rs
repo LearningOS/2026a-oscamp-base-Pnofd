@@ -1,12 +1,9 @@
 //! # Thread Creation
 //!
-//! In this exercise, you will learn how to create threads and pass data between threads.
-//!
-//! ## Concepts
-//! - `std::thread::spawn` creates a new thread
-//! - `move` closures capture variable ownership
-//! - `JoinHandle::join()` waits for thread completion and retrieves return value
-//!
+//! 线程，如果需要互通的话当然需要传递数据
+//! std::thread::spawn
+//! move
+//! JoinHandle::join()
 //! ## Advanced Thread Operations
 //! - **Thread sleep**: `thread::sleep` pauses the current thread.
 //! - **Thread‑local storage**: `thread_local!` macro defines static variables unique to each thread.
@@ -44,79 +41,14 @@ use std::time::Duration;
 // The following examples illustrate additional thread‑related concepts that are
 // useful in real‑world Rust concurrent programming.
 
-/// Example: Handling thread panic.
-///
-/// `join()` returns a `Result`. If the thread panics, the `Result` is an `Err`.
-/// This demonstrates how to catch and handle a panic from a spawned thread.
-///
-/// ```rust
-/// use std::thread;
-///
-/// fn panic_handling_example() {
-///     let handle = thread::spawn(|| {
-///         // Simulate a panic
-///         panic!("Thread panicked!");
-///     });
-///
-///     match handle.join() {
-///         Ok(_) => println!("Thread completed successfully."),
-///         Err(e) => println!("Thread panicked: {:?}", e),
-///     }
-/// }
-/// ```
-///
-/// In contrast, the exercises below use `unwrap()` for simplicity, assuming
-/// that the threads never panic.
 
-/// Example: Named thread and custom stack size.
-///
-/// Using `thread::Builder` you can assign a name to a thread (helpful for
-/// debugging) and set its stack size.
-///
-/// ```rust
-/// use std::thread;
-///
-/// fn named_thread_example() {
-///     let builder = thread::Builder::new()
-///         .name("my-worker".into())
-///         .stack_size(32 * 1024); // 32 KiB
-///
-///     let handle = builder.spawn(|| {
-///         println!("Hello from thread: {:?}", thread::current().name());
-///         42
-///     }).unwrap();
-///
-///     let result = handle.join().unwrap();
-///     println!("Thread returned: {}", result);
-/// }
-/// ```
 
-/// Example: Scoped threads (Rust 1.63+).
-///
-/// Scoped threads allow borrowing stack data without moving ownership.
-/// The threads are guaranteed to finish before the scope ends, so references
-/// remain valid.
-///
-/// ```rust
-/// use std::thread;
-///
-/// fn scoped_thread_example() {
-///     let a = vec![1, 2, 3];
-///     let b = vec![4, 5, 6];
-///
-///     let (sum_a, sum_b) = thread::scope(|s| {
-///         let h1 = s.spawn(|| a.iter().sum::<i32>());
-///         let h2 = s.spawn(|| b.iter().sum::<i32>());
-///         (h1.join().unwrap(), h2.join().unwrap())
-///     });
-///
-///     // `a` and `b` are still accessible here.
-///     println!("sum_a = {}, sum_b = {}", sum_a, sum_b);
-/// }
-/// ```
+
+
+
+
 
 /// Example: Thread‑local storage.
-///
 /// Each thread gets its own independent copy of a `thread_local!` variable.
 ///
 /// ```rust
@@ -149,15 +81,13 @@ use std::time::Duration;
 // Exercise Functions
 // ============================================================================
 
-/// Multiply each element of a vector by 2 in a new thread, returning the result vector.
-///
-/// Hint: Use `thread::spawn` and `move` closure.
 #[allow(unused_variables)]
 pub fn double_in_thread(numbers: Vec<i32>) -> Vec<i32> {
     // TODO: Create a new thread to multiply each element of numbers by 2
     // Use thread::spawn and move closure
     // Use join().unwrap() to get result
-    todo!()
+    let thread1=thread::spawn(move||{numbers.iter().map(|x| x * 2).collect::<Vec<_>>()});
+    thread1.join().unwrap()
 }
 
 /// Sum two vectors in parallel, returning a tuple of two sums.
@@ -167,7 +97,10 @@ pub fn double_in_thread(numbers: Vec<i32>) -> Vec<i32> {
 pub fn parallel_sum(a: Vec<i32>, b: Vec<i32>) -> (i32, i32) {
     // TODO: Create two threads to sum a and b respectively
     // Join both threads to get results
-    todo!()
+    let thread1=thread::spawn(move||{a.iter().sum::<i32>()});
+  
+    let thread2=thread::spawn(move||{b.iter().sum::<i32>()});
+      (thread1.join().unwrap(),thread2.join().unwrap())
 }
 
 // ============================================================================
@@ -185,7 +118,11 @@ pub fn named_sleeper(value: i32, ms: u64) -> i32 {
     // TODO: Create a thread builder with name "sleeper"
     // TODO: Spawn a thread that sleeps for `ms` milliseconds and returns `value`
     // TODO: Join the thread and return the value
-    todo!()
+    let builder=thread::Builder::new().name("sleeper".into());
+    let thread=builder.spawn(move||{
+    		thread::sleep(Duration::from_millis(ms));}
+    
+    );value
 }
 
 thread_local! {
@@ -200,7 +137,7 @@ thread_local! {
 /// Hint: Use `THREAD_COUNT.with(|cell| { ... })` to access the thread‑local variable.
 pub fn increment_thread_local() -> usize {
     // TODO: Use THREAD_COUNT.with to increment and return the new count
-    todo!()
+    THREAD_COUNT.with(|a|{let mut count = a.borrow_mut();*count+=1;*count} )
 }
 
 /// Spawn two threads using a **scoped thread** to compute the sum of two slices without moving ownership.
@@ -216,7 +153,13 @@ pub fn scoped_slice_sum(a: &[i32], b: &[i32]) -> (i32, i32) {
     // TODO: Use thread::scope to spawn two threads
     // TODO: Each thread sums its slice
     // TODO: Wait for both threads and return the results
-    todo!()
+    thread::scope(|s|{
+    let handle1=s.spawn(||a.iter().sum());
+    let handle2=s.spawn(||b.iter().sum());
+    (handle1.join().unwrap(),handle2.join().unwrap())
+    }
+    
+    )
 }
 
 /// Handle a possible panic in a spawned thread.
@@ -233,7 +176,18 @@ pub fn scoped_slice_sum(a: &[i32], b: &[i32]) -> (i32, i32) {
 pub fn handle_panic(value: i32, should_panic: bool) -> Result<i32, ()> {
     // TODO: Spawn a thread that either panics or returns value
     // TODO: Join and map the result appropriately
-    todo!()
+    let handle=thread::spawn(move||{
+    if should_panic{
+    panic!("oops")
+    }
+    else{
+    value
+    }
+    });
+    match handle.join(){
+    Ok(value)=>Ok(value),
+    Err(_)=>Err(()),
+    }
 }
 
 #[cfg(test)]

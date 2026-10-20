@@ -1,7 +1,5 @@
 //! # Tokio Async Tasks
-//!
 //! In this exercise, you will use `tokio::spawn` to create concurrent asynchronous tasks.
-//!
 //! ## Concepts
 //! - `tokio::spawn` creates asynchronous tasks
 //! - `JoinHandle` waits for task completion
@@ -11,13 +9,19 @@ use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
 
 /// Concurrently compute the square of each number in 0..n, collect results and return in order.
-///
 /// Hint: Create `tokio::spawn` task for each i, collect JoinHandle, await them sequentially.
 pub async fn concurrent_squares(n: usize) -> Vec<usize> {
     // TODO: Create n asynchronous tasks, each computing i * i
     // TODO: Collect all JoinHandle
     // TODO: Await each one to get result
-    todo!()
+    let mut handles = Vec::with_capacity(n);
+    let mut result = Vec::with_capacity(n);
+    for i in 0..n{
+    let handle=tokio::spawn(async move { i * i });
+    handles.push(handle);
+    }
+    for handle in handles{ result.push(handle.await.unwrap());}
+    result
 }
 
 /// Concurrently execute multiple "time-consuming" tasks (simulated with sleep), return all results.

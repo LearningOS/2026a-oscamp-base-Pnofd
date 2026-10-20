@@ -1,11 +1,4 @@
-//! # Mutex Shared State
-//!
-//! In this exercise, you will use `Arc<Mutex<T>>` to safely share and modify data between multiple threads.
-//!
-//! ## Concepts
-//! - `Mutex<T>` mutex protects shared data
-//! - `Arc<T>` atomic reference counting enables cross-thread sharing
-//! - `lock()` acquires the lock and accesses data
+
 
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -20,7 +13,19 @@ pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
     // TODO: Spawn n_threads threads
     // TODO: In each thread, lock() and increment count_per_thread times
     // TODO: Join all threads, return final value
-    todo!()
+    let counter = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+    for _ in 0..n_threads {
+    let counter = Arc::clone(&counter);
+    let handle = thread::spawn(move||{
+    let mut num = counter.lock().unwrap();
+    *num+=count_per_thread;
+    });
+    handles.push(handle);
+    }
+    for handle in handles{handle.join().unwrap();};
+    let result = *counter.lock().unwrap();
+    result
 }
 
 /// Add elements to a shared vector concurrently using multiple threads.
@@ -32,7 +37,20 @@ pub fn concurrent_collect(n_threads: usize) -> Vec<usize> {
     // TODO: Create Arc<Mutex<Vec<usize>>>
     // TODO: Each thread pushes its own id
     // TODO: After joining all threads, sort the result and return
-    todo!()
+    let counters=Arc::new(Mutex::new(vec![]));
+    let mut handles = vec![];
+    for i in 0..n_threads {   
+    let counter = Arc::clone(&counters);
+    let handle = thread::spawn(move||{
+    let mut num = counter.lock().unwrap();
+    (*num).push(i);
+    });
+    handles.push(handle);
+    }
+    for handle in handles{handle.join().unwrap();};
+    let mut result = counters.lock().unwrap().clone();
+    result.sort();
+    result
 }
 
 #[cfg(test)]
